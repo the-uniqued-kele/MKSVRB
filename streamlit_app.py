@@ -190,7 +190,6 @@ class EasyMKL():
         pred = EasyMKL.rank(self, list_Ktest)
         pred = np.array(pred).reshape(-1, 1)
         pred = pred / 1000000000000000000+20
-        print("pred", pred)
         predict_proba = platt_lr.predict_proba(pred)[:, 1]
         #y25 = np.array([[31]], dtype=float)
         #y25 = platt_lr.predict_proba(y25)[:, 1]
