@@ -313,18 +313,18 @@ if st.button('Predict'):
     #shap.summary_plot(shap_values, test_x, feature_names=feature_names, plot_type="violin")
     #shap_values = np.round(shap_values, 2)
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-    shap.force_plot(
-        explainer.expected_value,
-        shap_values,
-        test_x5,
-        matplotlib=True,
-        feature_names=feature_names,
-        figsize=(30, 7),
-        contribution_threshold=0.00001
-    )
+        shap.force_plot(
+            explainer.expected_value,
+            shap_values,
+            test_x5,
+            matplotlib=True,
+            feature_names=feature_names,
+            figsize=(30, 7),
+            contribution_threshold=0.00001
+        )
         plt.savefig(temp_file.name)
-    plt.close()
-    image = Image.open(temp_file.name)
+        plt.close()
+        image = Image.open(temp_file.name)
     st.image(image, use_column_width=True)
     st.write("*SHAP Force Plot:  The plot shows the contribution of each patient feature to the likelihood of recurrence "
              "of Budd-Chiari syndrome.A red arrow indicates that the feature increases the risk of recurrence, while a "
