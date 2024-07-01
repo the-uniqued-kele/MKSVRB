@@ -211,7 +211,6 @@ class EasyMKL():
         pred = np.array(pred).reshape(-1, 1)
         pred = pred / 1000000000000000000 + 20
         pred = pred.reshape(-1)
-        print(pred)
         #pred = cvxopt.matrix(pred)
         #pred = (pred >= 0.594477).astype(int)
         #print(pred)
@@ -286,8 +285,6 @@ y_pred_proba = np.array(y_pred_proba).reshape(-1)
 sorted_indices = np.argsort(y_pred)
 y_pred_sorted = y_pred[sorted_indices]
 y_pred_proba_sorted = y_pred_proba[sorted_indices]
-print("y_pred", y_pred_sorted)
-print("y_pred_proba", y_pred_proba_sorted)
 y_pred_sorted = np.append(y_pred_sorted, 25)
 y_pred_sorted = np.append(y_pred_sorted, 31)
 y_pred_proba_sorted = np.append(y_pred_proba_sorted, 0.88153619)
