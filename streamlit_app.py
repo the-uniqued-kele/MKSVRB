@@ -325,7 +325,7 @@ if st.button('Predict'):
         plt.savefig(temp_file.name)
         plt.close()
         image = Image.open(temp_file.name)
-    st.image(image, use_column_width=True)
+        st.image(image, use_column_width=True)
     st.write("*SHAP Force Plot:  The plot shows the contribution of each patient feature to the likelihood of recurrence "
              "of Budd-Chiari syndrome.A red arrow indicates that the feature increases the risk of recurrence, while a "
              "blue arrow indicates that the feature decreases the risk. The length of each bar represents the magnitude"
