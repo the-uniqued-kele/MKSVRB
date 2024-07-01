@@ -2,3 +2,8 @@ streamlit
 pandas
 scikit-learn
 altair
+numpy
+shap
+PIT
+cvxopt
+matplotlib
