@@ -44,7 +44,7 @@ test_x3 = [input6, input7, input3, input4, input5]
 test_x3 = np.array(test_x3).reshape(1, -1)
 test_x5 = np.array(test_x5).reshape(1, -1)
 
-ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/blob/master/train.xlsx'
+ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/train.xlsx'
 response = requests.get(ur2)
 if response.status_code == 200:
     data = pd.read_excel(BytesIO(response.content))
