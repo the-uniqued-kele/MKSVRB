@@ -10,9 +10,17 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import streamlit as st
 from sklearn.metrics.pairwise import polynomial_kernel, rbf_kernel, linear_kernel, sigmoid_kernel
+import requests
+from io import BytesIO
 
-image = Image.open('C:/Users/薛伟荣/Desktop/布加综合征/部署/关系图.png')
-st.image(image, use_column_width=True)
+url = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/%E5%85%B3%E7%B3%BB%E5%9B%BE.png'
+response = requests.get(url)
+if response.status_code == 200:
+    img = Image.open(BytesIO(response.content))
+    st.image(img, caption='GitHub 图像文件')
+else:
+    st.write('Failed to load image from GitHub')
+
 
 st.title('Predictor of recurrence risk of BCS within three years.')
 st.write('Please enter the indicator value.')
