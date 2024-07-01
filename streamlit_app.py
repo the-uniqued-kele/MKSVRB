@@ -48,10 +48,12 @@ ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/train.csv'
 data = pd.read_csv(ur2,header=0)
 train_x = data.iloc[:, 1:].values
 train_y = data.iloc[:, 0].values
-data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/train + valid.xlsx')
+ur3 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/train%20%2B%20valid.csv'
+data = pd.read_csv(ur3,header=0)
 all_x = data.iloc[:, 1:].values
 all_y = data.iloc[:, 0].values
-data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/test.xlsx')
+ur4 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/test.csv'
+data = pd.read_csv(ur4,header=0)
 test_x = data.iloc[:, 1:].values
 test_y = data.iloc[:, 0].values
 
