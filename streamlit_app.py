@@ -12,6 +12,7 @@ import streamlit as st
 from sklearn.metrics.pairwise import polynomial_kernel, rbf_kernel, linear_kernel, sigmoid_kernel
 import requests
 from io import BytesIO
+import tempfile
 
 url = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/%E5%85%B3%E7%B3%BB%E5%9B%BE.png'
 response = requests.get(url)
@@ -311,12 +312,19 @@ if st.button('Predict'):
     #print(shap_values)
     #shap.summary_plot(shap_values, test_x, feature_names=feature_names, plot_type="violin")
     #shap_values = np.round(shap_values, 2)
-    buffer = io.BytesIO()
-    shap.force_plot(explainer.expected_value, shap_values, test_x5, matplotlib=True, feature_names=feature_names, figsize=(30, 7), contribution_threshold=0.00001)
-    plt.savefig(buffer, format='png')
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+    shap.force_plot(
+        explainer.expected_value,
+        shap_values,
+        test_x5,
+        matplotlib=True,
+        feature_names=feature_names,
+        figsize=(30, 7),
+        contribution_threshold=0.00001
+    )
+        plt.savefig(temp_file.name)
     plt.close()
-    buffer.seek(0)  
-    image = Image.open(buffer)
+    image = Image.open(temp_file.name)
     st.image(image, use_column_width=True)
     st.write("*SHAP Force Plot:  The plot shows the contribution of each patient feature to the likelihood of recurrence "
              "of Budd-Chiari syndrome.A red arrow indicates that the feature increases the risk of recurrence, while a "
