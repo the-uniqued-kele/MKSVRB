@@ -1,249 +1,318 @@
-import streamlit as st
-import pandas as pd
+import cvxopt
 import numpy as np
+import shap
+from PIL import Image
+from cvxopt import matrix, solvers, mul
+import pandas as pd
+from matplotlib import pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve, auc, accuracy_score
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-import altair as alt
-import time
-import zipfile
+import streamlit as st
+from sklearn.metrics.pairwise import polynomial_kernel, rbf_kernel, linear_kernel, sigmoid_kernel
 
-# Page title
-st.set_page_config(page_title='ML model builder', page_icon='🏗️')
-st.title('🏗️ ML model builder')
+image = Image.open('C:/Users/薛伟荣/Desktop/布加综合征/部署/关系图.png')
+st.image(image, use_column_width=True)
 
-with st.expander('About this app'):
-  st.markdown('**What can this app do?**')
-  st.info('This app allow users to build a machine learning (ML) model in an end-to-end workflow. Particularly, this encompasses data upload, data pre-processing, ML model building and post-model analysis.')
-
-  st.markdown('**How to use the app?**')
-  st.warning('To engage with the app, go to the sidebar and 1. Select a data set and 2. Adjust the model parameters by adjusting the various slider widgets. As a result, this would initiate the ML model building process, display the model results as well as allowing users to download the generated models and accompanying data.')
-
-  st.markdown('**Under the hood**')
-  st.markdown('Data sets:')
-  st.code('''- Drug solubility data set
-  ''', language='markdown')
-  
-  st.markdown('Libraries used:')
-  st.code('''- Pandas for data wrangling
-- Scikit-learn for building a machine learning model
-- Altair for chart creation
-- Streamlit for user interface
-  ''', language='markdown')
-
-
-# Sidebar for accepting input parameters
-with st.sidebar:
-    # Load data
-    st.header('1.1. Input data')
-
-    st.markdown('**1. Use custom data**')
-    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-    if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file, index_col=False)
-      
-    # Download example data
-    @st.cache_data
-    def convert_df(input_df):
-        return input_df.to_csv(index=False).encode('utf-8')
-    example_csv = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/delaney_solubility_with_descriptors.csv')
-    csv = convert_df(example_csv)
-    st.download_button(
-        label="Download example CSV",
-        data=csv,
-        file_name='delaney_solubility_with_descriptors.csv',
-        mime='text/csv',
-    )
-
-    # Select example data
-    st.markdown('**1.2. Use example data**')
-    example_data = st.toggle('Load example data')
-    if example_data:
-        df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/delaney_solubility_with_descriptors.csv')
-
-    st.header('2. Set Parameters')
-    parameter_split_size = st.slider('Data split ratio (% for Training Set)', 10, 90, 80, 5)
-
-    st.subheader('2.1. Learning Parameters')
-    with st.expander('See parameters'):
-        parameter_n_estimators = st.slider('Number of estimators (n_estimators)', 0, 1000, 100, 100)
-        parameter_max_features = st.select_slider('Max features (max_features)', options=['all', 'sqrt', 'log2'])
-        parameter_min_samples_split = st.slider('Minimum number of samples required to split an internal node (min_samples_split)', 2, 10, 2, 1)
-        parameter_min_samples_leaf = st.slider('Minimum number of samples required to be at a leaf node (min_samples_leaf)', 1, 10, 2, 1)
-
-    st.subheader('2.2. General Parameters')
-    with st.expander('See parameters', expanded=False):
-        parameter_random_state = st.slider('Seed number (random_state)', 0, 1000, 42, 1)
-        parameter_criterion = st.select_slider('Performance measure (criterion)', options=['squared_error', 'absolute_error', 'friedman_mse'])
-        parameter_bootstrap = st.select_slider('Bootstrap samples when building trees (bootstrap)', options=[True, False])
-        parameter_oob_score = st.select_slider('Whether to use out-of-bag samples to estimate the R^2 on unseen data (oob_score)', options=[False, True])
-
-    sleep_time = st.slider('Sleep time', 0, 3, 0)
-
-# Initiate the model building process
-if uploaded_file or example_data: 
-    with st.status("Running ...", expanded=True) as status:
-    
-        st.write("Loading data ...")
-        time.sleep(sleep_time)
-
-        st.write("Preparing data ...")
-        time.sleep(sleep_time)
-        X = df.iloc[:,:-1]
-        y = df.iloc[:,-1]
-            
-        st.write("Splitting data ...")
-        time.sleep(sleep_time)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(100-parameter_split_size)/100, random_state=parameter_random_state)
-    
-        st.write("Model training ...")
-        time.sleep(sleep_time)
-
-        if parameter_max_features == 'all':
-            parameter_max_features = None
-            parameter_max_features_metric = X.shape[1]
-        
-        rf = RandomForestRegressor(
-                n_estimators=parameter_n_estimators,
-                max_features=parameter_max_features,
-                min_samples_split=parameter_min_samples_split,
-                min_samples_leaf=parameter_min_samples_leaf,
-                random_state=parameter_random_state,
-                criterion=parameter_criterion,
-                bootstrap=parameter_bootstrap,
-                oob_score=parameter_oob_score)
-        rf.fit(X_train, y_train)
-        
-        st.write("Applying model to make predictions ...")
-        time.sleep(sleep_time)
-        y_train_pred = rf.predict(X_train)
-        y_test_pred = rf.predict(X_test)
-            
-        st.write("Evaluating performance metrics ...")
-        time.sleep(sleep_time)
-        train_mse = mean_squared_error(y_train, y_train_pred)
-        train_r2 = r2_score(y_train, y_train_pred)
-        test_mse = mean_squared_error(y_test, y_test_pred)
-        test_r2 = r2_score(y_test, y_test_pred)
-        
-        st.write("Displaying performance metrics ...")
-        time.sleep(sleep_time)
-        parameter_criterion_string = ' '.join([x.capitalize() for x in parameter_criterion.split('_')])
-        #if 'Mse' in parameter_criterion_string:
-        #    parameter_criterion_string = parameter_criterion_string.replace('Mse', 'MSE')
-        rf_results = pd.DataFrame(['Random forest', train_mse, train_r2, test_mse, test_r2]).transpose()
-        rf_results.columns = ['Method', f'Training {parameter_criterion_string}', 'Training R2', f'Test {parameter_criterion_string}', 'Test R2']
-        # Convert objects to numerics
-        for col in rf_results.columns:
-            rf_results[col] = pd.to_numeric(rf_results[col], errors='ignore')
-        # Round to 3 digits
-        rf_results = rf_results.round(3)
-        
-    status.update(label="Status", state="complete", expanded=False)
-
-    # Display data info
-    st.header('Input data', divider='rainbow')
-    col = st.columns(4)
-    col[0].metric(label="No. of samples", value=X.shape[0], delta="")
-    col[1].metric(label="No. of X variables", value=X.shape[1], delta="")
-    col[2].metric(label="No. of Training samples", value=X_train.shape[0], delta="")
-    col[3].metric(label="No. of Test samples", value=X_test.shape[0], delta="")
-    
-    with st.expander('Initial dataset', expanded=True):
-        st.dataframe(df, height=210, use_container_width=True)
-    with st.expander('Train split', expanded=False):
-        train_col = st.columns((3,1))
-        with train_col[0]:
-            st.markdown('**X**')
-            st.dataframe(X_train, height=210, hide_index=True, use_container_width=True)
-        with train_col[1]:
-            st.markdown('**y**')
-            st.dataframe(y_train, height=210, hide_index=True, use_container_width=True)
-    with st.expander('Test split', expanded=False):
-        test_col = st.columns((3,1))
-        with test_col[0]:
-            st.markdown('**X**')
-            st.dataframe(X_test, height=210, hide_index=True, use_container_width=True)
-        with test_col[1]:
-            st.markdown('**y**')
-            st.dataframe(y_test, height=210, hide_index=True, use_container_width=True)
-
-    # Zip dataset files
-    df.to_csv('dataset.csv', index=False)
-    X_train.to_csv('X_train.csv', index=False)
-    y_train.to_csv('y_train.csv', index=False)
-    X_test.to_csv('X_test.csv', index=False)
-    y_test.to_csv('y_test.csv', index=False)
-    
-    list_files = ['dataset.csv', 'X_train.csv', 'y_train.csv', 'X_test.csv', 'y_test.csv']
-    with zipfile.ZipFile('dataset.zip', 'w') as zipF:
-        for file in list_files:
-            zipF.write(file, compress_type=zipfile.ZIP_DEFLATED)
-
-    with open('dataset.zip', 'rb') as datazip:
-        btn = st.download_button(
-                label='Download ZIP',
-                data=datazip,
-                file_name="dataset.zip",
-                mime="application/octet-stream"
-                )
-    
-    # Display model parameters
-    st.header('Model parameters', divider='rainbow')
-    parameters_col = st.columns(3)
-    parameters_col[0].metric(label="Data split ratio (% for Training Set)", value=parameter_split_size, delta="")
-    parameters_col[1].metric(label="Number of estimators (n_estimators)", value=parameter_n_estimators, delta="")
-    parameters_col[2].metric(label="Max features (max_features)", value=parameter_max_features_metric, delta="")
-    
-    # Display feature importance plot
-    importances = rf.feature_importances_
-    feature_names = list(X.columns)
-    forest_importances = pd.Series(importances, index=feature_names)
-    df_importance = forest_importances.reset_index().rename(columns={'index': 'feature', 0: 'value'})
-    
-    bars = alt.Chart(df_importance).mark_bar(size=40).encode(
-             x='value:Q',
-             y=alt.Y('feature:N', sort='-x')
-           ).properties(height=250)
-
-    performance_col = st.columns((2, 0.2, 3))
-    with performance_col[0]:
-        st.header('Model performance', divider='rainbow')
-        st.dataframe(rf_results.T.reset_index().rename(columns={'index': 'Parameter', 0: 'Value'}))
-    with performance_col[2]:
-        st.header('Feature importance', divider='rainbow')
-        st.altair_chart(bars, theme='streamlit', use_container_width=True)
-
-    # Prediction results
-    st.header('Prediction results', divider='rainbow')
-    s_y_train = pd.Series(y_train, name='actual').reset_index(drop=True)
-    s_y_train_pred = pd.Series(y_train_pred, name='predicted').reset_index(drop=True)
-    df_train = pd.DataFrame(data=[s_y_train, s_y_train_pred], index=None).T
-    df_train['class'] = 'train'
-        
-    s_y_test = pd.Series(y_test, name='actual').reset_index(drop=True)
-    s_y_test_pred = pd.Series(y_test_pred, name='predicted').reset_index(drop=True)
-    df_test = pd.DataFrame(data=[s_y_test, s_y_test_pred], index=None).T
-    df_test['class'] = 'test'
-    
-    df_prediction = pd.concat([df_train, df_test], axis=0)
-    
-    prediction_col = st.columns((2, 0.2, 3))
-    
-    # Display dataframe
-    with prediction_col[0]:
-        st.dataframe(df_prediction, height=320, use_container_width=True)
-
-    # Display scatter plot of actual vs predicted values
-    with prediction_col[2]:
-        scatter = alt.Chart(df_prediction).mark_circle(size=60).encode(
-                        x='actual',
-                        y='predicted',
-                        color='class'
-                  )
-        st.altair_chart(scatter, theme='streamlit', use_container_width=True)
-
-    
-# Ask for CSV upload if none is detected
+st.title('Predictor of recurrence risk of BCS within three years.')
+st.write('Please enter the indicator value.')
+input1 = st.number_input("Age")
+if input1 >= 50:
+    input6 = 1
+elif input1 < 50:
+    input6 = 0
+input2 = st.number_input("Operation(simple balloon dilation=1, stent implantation=2, catheter-directed thrombolysis=3, TIPS=4)")
+if input2 == 0:
+    input7 = 3
 else:
-    st.warning('👈 Upload a CSV file or click *"Load example data"* to get started!')
+    input7 = input2
+input3 = st.number_input("NEU(x10^9/L)")
+input4 = st.number_input("ALB(g/L)")
+input5 = st.number_input("AFP(ug/L)")
+test_x5 = [input1, input2, input3, input4, input5] #用于显示
+test_x3 = [input6, input7, input3, input4, input5]
+
+# 转换为 NumPy 数组，确保形状为 (1, 5)
+test_x3 = np.array(test_x3).reshape(1, -1)
+test_x5 = np.array(test_x5).reshape(1, -1)
+
+
+data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/train.xlsx')
+train_x = data.iloc[:, 1:].values
+train_y = data.iloc[:, 0].values
+data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/train + valid.xlsx')
+all_x = data.iloc[:, 1:].values
+all_y = data.iloc[:, 0].values
+data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/test.xlsx')
+test_x = data.iloc[:, 1:].values
+test_y = data.iloc[:, 0].values
+
+scaler = MinMaxScaler()
+all_x = scaler.fit_transform(all_x)
+train_x = scaler.transform(train_x)
+test_x2 = scaler.transform(test_x)
+test_x4 = scaler.transform(test_x3)
+
+
+
+class EasyMKL():
+    def __init__(self, lam=0.1, tracenorm=True):
+        self.lam = lam
+        self.tracenorm = tracenorm
+        self.list_Ktr = None
+        self.labels = None
+        self.gamma = None
+        self.weights = None
+        self.traces = []
+
+    # 初始化参数，其中lam是正则化参数，正则化参数过大，模型容易过拟合；tracenorm表示是否进行迹归一化，即每个核矩阵除以自身的迹，用以平衡各核矩阵的尺度；矩阵的迹是矩阵特征值之和，即第i行第i列的值之和。
+
+    def sum_kernels(self, list_K, weights=None):
+        k = matrix(0.0, (list_K[0].shape[0], list_K[0].shape[1]))
+        # 创建一个与核矩阵列表中的第一个核矩阵形状相同的全零矩阵
+        if weights == None:
+            for ker in list_K:
+                k += ker
+        # 如果核矩阵权重为零，将所有核矩阵简单相加为k
+        else:
+            for w, ker in zip(weights, list_K):
+                k += w * ker
+        return k
+
+    # 如果核矩阵权重不为零，每个核矩阵的权重乘以核矩阵再相加为k
+
+    def traceN(self, k):
+        return sum([k[i, i] for i in range(k.shape[0])]) / k.shape[0]
+
+    # 定义计算迹的函数：每个矩阵第i行第i列的元素相加得到迹再除以行数
+
+    def train(self, list_Ktr, labels):
+        # list_Ktr为训练集的核矩阵列表，labels为训练集标签
+        self.list_Ktr = list_Ktr
+        for i in range(len(self.list_Ktr)):
+            k = self.list_Ktr[i]
+            self.traces.append(self.traceN(k))
+        if self.tracenorm:
+            self.list_Ktr = [k / self.traceN(k) for k in list_Ktr]
+        # 每个核矩阵除以（迹/行数），以进行迹归一化
+
+        set_labels = set(labels)
+        if len(set_labels) != 2:
+            print('The different labels are not 2')
+            return None
+        elif (-1 in set_labels and 1 in set_labels):
+            self.labels = labels
+        else:
+            poslab = max(set_labels)
+            self.labels = matrix(np.array([1. if i == poslab else -1. for i in labels]))
+        # 检查标签是否为1和-1，若标签不止两个，报错；若标签不为1和-1，将最大值赋值为1，其他值赋值为-1。
+
+        ker_matrix = matrix(self.sum_kernels(self.list_Ktr))
+        # print(ker_matrix)
+        YY = matrix(np.diag(list(matrix(self.labels))))
+        KLL = (1.0 - self.lam) * YY * ker_matrix * YY
+        # print("KLL",KLL)
+        LID = matrix(np.diag([self.lam] * len(self.labels)))
+        # print("LID",LID)
+        Q = 2 * (KLL + LID)
+        p = matrix([0.0] * len(self.labels))
+        G = -matrix(np.diag([1.0] * len(self.labels)))
+        h = matrix([0.0] * len(self.labels), (len(self.labels), 1))
+        A = matrix(
+            [[1.0 if lab == +1 else 0 for lab in self.labels], [1.0 if lab2 == -1 else 0 for lab2 in self.labels]]).T
+        B = matrix([[1.0], [1.0]], (2, 1))
+        solvers.options['show_progress'] = False  # True
+        sol = solvers.qp(Q, p, G, h, A, B, kktsolver='ldl', options={'kktreg': 1e-9, 'show_progress': False})
+        self.gamma = sol['x']
+        # 计算合成核矩阵的权重向量sol，反应每个核矩阵的权重，并赋值给γ。
+
+        bias = 0.5 * self.gamma.T * ker_matrix * YY * self.gamma
+        self.bias = bias
+        yg = mul(self.gamma.T, self.labels.T)
+
+        self.weights = []
+        for i in range(len(self.list_Ktr)):
+            k = self.list_Ktr[i]
+            b = yg @ k @ yg.T
+            self.weights.append(b[0])
+
+        # 计算得到每个核矩阵的权重
+
+        norm2 = sum([w for w in self.weights])
+        self.weights = [w / norm2 for w in self.weights]
+
+        # 每个核矩阵的权重除以权重总和，以权重归一化。
+
+        if True:
+            ker_matrix = matrix(self.sum_kernels(self.list_Ktr, self.weights))
+            YY = matrix(np.diag(list(matrix(self.labels))))
+            KLL = (1.0 - self.lam) * YY * ker_matrix * YY
+            LID = matrix(np.diag([self.lam] * len(self.labels)))
+            Q = 2 * (KLL + LID)
+            p = matrix([0.0] * len(self.labels))
+            G = -matrix(np.diag([1.0] * len(self.labels)))
+            h = matrix([0.0] * len(self.labels), (len(self.labels), 1))
+            A = matrix([[1.0 if lab == +1 else 0 for lab in self.labels],
+                        [1.0 if lab2 == -1 else 0 for lab2 in self.labels]]).T
+            B = matrix([[1.0], [1.0]], (2, 1))
+            solvers.options['show_progress'] = False  # True
+            sol = solvers.qp(Q, p, G, h, A, B, kktsolver='ldl', options={'kktreg': 1e-9, 'show_progress': False})
+            self.gamma = sol['x']
+        # 按照除以归一化迹后的归一化权重重新计算合成核矩阵，并得到法向量
+        return self
+
+    def rank(self, list_Ktest):
+        if self.weights == None:
+            print('EasyMKL has to be trained first!')
+            return
+        YY = matrix(np.diag(list(matrix(self.labels))))
+        ker_matrix = matrix(self.sum_kernels(list_Ktest, self.weights))
+        z = ker_matrix * YY * self.gamma
+        return z - self.bias
+
+    def predict_proba(self, list_Ktest2, list_Ktest):
+        z = EasyMKL.rank(self, list_Ktest2)
+        #print("z", z)
+        z = np.array(z).reshape(-1, 1)
+        z = z/1000000000000000000+20
+        platt_lr = LogisticRegression()
+        platt_lr.fit(z, test_y)
+        pred = EasyMKL.rank(self, list_Ktest)
+        pred = np.array(pred).reshape(-1, 1)
+        pred = pred / 1000000000000000000+20
+        print("pred", pred)
+        predict_proba = platt_lr.predict_proba(pred)[:, 1]
+        #y25 = np.array([[31]], dtype=float)
+        #y25 = platt_lr.predict_proba(y25)[:, 1]
+        #print("y25", y25)
+        return predict_proba
+
+    def predictshap(self, test_x):
+        #K_linear_test2 = linear_kernel(test_x2, train_x)
+        #K_poly_test2 = polynomial_kernel(test_x2, train_x, degree=13.630396936823104, coef0=58.08890313058478)
+        #K_sigmoid_test2 = sigmoid_kernel(test_x2, train_x, gamma=3.5119462457522683, coef0=2.2448812025130174)
+        #K_rbf_test2 = rbf_kernel(test_x2, train_x, gamma=89.18244737114587)
+        #list_K_test2 = [K_linear_test2, K_poly_test2, K_sigmoid_test2, K_rbf_test2]
+        K_linear_test = linear_kernel(test_x, train_x)
+        K_poly_test = polynomial_kernel(test_x, train_x, degree=13.630396936823104, coef0=58.08890313058478)
+        K_sigmoid_test = sigmoid_kernel(test_x, train_x, gamma=3.5119462457522683, coef0=2.2448812025130174)
+        K_rbf_test = rbf_kernel(test_x, train_x, gamma=89.18244737114587)
+        list_K_test = [K_linear_test, K_poly_test, K_sigmoid_test, K_rbf_test]
+        pred = EasyMKL.rank(self, list_K_test)
+        pred = np.array(pred).reshape(-1, 1)
+        pred = pred / 1000000000000000000 + 20
+        pred = pred.reshape(-1)
+        print(pred)
+        #pred = cvxopt.matrix(pred)
+        #pred = (pred >= 0.594477).astype(int)
+        #print(pred)
+        return pred
+
+
+#  z是每个样本的每个核矩阵的分数，用以方便排序选择最佳的核函数
+
+def get_easyMKl_weigths(list_K_train, train_y):
+    l = 1  # lambda
+    easy = EasyMKL(lam=l, tracenorm=True)
+    easy.train(list_K_train, matrix(train_y))
+    weights = easy.weights
+    return weights
+
+
+# 定义得到权重函数：调动EasyMKL类中train函数，用训练集计算各核函数权重；klisttr是一个长度为n的列表，由n个长度为d的向量组成。
+
+def combine_kernels(weights, kernels):
+    result = np.zeros(kernels[0].shape)
+    n = len(weights)
+    for i in range(n):
+        result = result + weights[i] * kernels[i]
+    return result
+
+
+# 模拟一个已训练的模型
+model = EasyMKL(lam=0.9442807057096345, tracenorm=True)
+K_linear_train = linear_kernel(train_x, train_x)
+K_poly_train = polynomial_kernel(train_x, train_x, degree=13.630396936823104, coef0=58.08890313058478)
+K_sigmoid_train = sigmoid_kernel(train_x, train_x, gamma=3.5119462457522683, coef0=2.2448812025130174)
+K_rbf_train = rbf_kernel(train_x, gamma=89.18244737114587)
+list_K_train = [K_linear_train, K_poly_train, K_sigmoid_train, K_rbf_train]
+K_linear_test2 = linear_kernel(test_x2, train_x)
+K_poly_test2 = polynomial_kernel(test_x2, train_x, degree=13.630396936823104, coef0=58.08890313058478)
+K_sigmoid_test2 = sigmoid_kernel(test_x2, train_x, gamma=3.5119462457522683, coef0=2.2448812025130174)
+K_rbf_test2 = rbf_kernel(test_x2, train_x, gamma=89.18244737114587)
+list_K_test2 = [K_linear_test2, K_poly_test2, K_sigmoid_test2, K_rbf_test2]
+K_linear_test = linear_kernel(test_x4, train_x)
+K_poly_test = polynomial_kernel(test_x4, train_x, degree=13.630396936823104, coef0=58.08890313058478)
+K_sigmoid_test = sigmoid_kernel(test_x4, train_x, gamma=3.5119462457522683, coef0=2.2448812025130174)
+K_rbf_test = rbf_kernel(test_x4, train_x, gamma=89.18244737114587)
+list_K_test = [K_linear_test, K_poly_test, K_sigmoid_test, K_rbf_test]
+
+model.train(list_K_train, matrix(train_y))
+y_pred = model.rank(list_K_test2)
+y_pred = np.array(y_pred).reshape(-1, 1)
+y_pred = y_pred / 1000000000000000000+20
+y_pred_proba = model.predict_proba(list_K_test2, list_K_test2)
+
+fpr, tpr, thresholds = roc_curve(test_y, y_pred_proba)
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+lw = 1.5
+plt.plot(fpr, tpr, color='darkorange', lw=lw,
+         label='ROC curve (area = %0.2f)' % roc_auc)
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('1-Specificity')
+plt.ylabel('Sensitivity')
+plt.title('ROC curve')
+plt.legend(loc="lower right")
+plt.show()
+
+
+
+y_pred = np.array(y_pred).reshape(-1)
+y_pred_proba = np.array(y_pred_proba).reshape(-1)
+
+sorted_indices = np.argsort(y_pred)
+y_pred_sorted = y_pred[sorted_indices]
+y_pred_proba_sorted = y_pred_proba[sorted_indices]
+print("y_pred", y_pred_sorted)
+print("y_pred_proba", y_pred_proba_sorted)
+y_pred_sorted = np.append(y_pred_sorted, 25)
+y_pred_sorted = np.append(y_pred_sorted, 31)
+y_pred_proba_sorted = np.append(y_pred_proba_sorted, 0.88153619)
+y_pred_proba_sorted = np.append(y_pred_proba_sorted, 0.97016787)
+
+
+# 预测并展示结果
+if st.button('Predict'):
+    score = model.rank(list_K_test)
+    score = np.array(score).reshape(-1, 1)
+    score = score / 1000000000000000000 + 20
+    y_pred_proba = model.predict_proba(list_K_test2, list_K_test)
+    y_pred_proba = np.array(y_pred_proba)
+    y_pred = (y_pred_proba >= 0.594477).astype(int)
+    st.write(f'your score: {np.array(score).reshape(-1)}')
+    st.write(f'the probability of recurrence: {y_pred_proba}')
+    if y_pred[0] == 1:
+        st.write('recurrence risk: <span style="color:red"> high risk</span>', unsafe_allow_html=True)
+    elif y_pred[0] == 0:
+        st.write('recurrence risk: <span style="color:blue"> low risk</span>', unsafe_allow_html=True)
+    feature_names = ["Age", "Operation", "NEU", "ALB", "AFP"]
+    explainer = shap.KernelExplainer(model.predictshap, test_x2)
+    shap_values = explainer.shap_values(test_x4)
+    #print(shap_values)
+    #shap.summary_plot(shap_values, test_x, feature_names=feature_names, plot_type="violin")
+    #shap_values = np.round(shap_values, 2)
+    shap.force_plot(explainer.expected_value, shap_values, test_x5, matplotlib=True, feature_names=feature_names, figsize=(30, 7), contribution_threshold=0.00001)
+    plt.savefig('C:/Users/薛伟荣/Desktop/布加综合征/部署/SHAP.png')
+    plt.show()
+    image2 = Image.open('C:/Users/薛伟荣/Desktop/布加综合征/部署/SHAP.png')
+    st.image(image2, use_column_width=True)
+    st.write("*SHAP Force Plot:  The plot shows the contribution of each patient feature to the likelihood of recurrence "
+             "of Budd-Chiari syndrome.A red arrow indicates that the feature increases the risk of recurrence, while a "
+             "blue arrow indicates that the feature decreases the risk. The length of each bar represents the magnitude"
+             " of the feature's effect on recurrence. Vertical lines between the two colors represent the patient's scor"
+             "e.")
