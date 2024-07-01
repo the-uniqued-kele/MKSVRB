@@ -307,7 +307,7 @@ if st.button('Predict'):
         st.write('recurrence risk: <span style="color:blue"> low risk</span>', unsafe_allow_html=True)
     feature_names = ["Age", "Operation", "NEU", "ALB", "AFP"]
     explainer = shap.KernelExplainer(model.predictshap, test_x2)
-    shap_values = explainer.shap_values(test_x4)
+    shap_values = explainer.shap_values(test_x4, silent=True)
     #print(shap_values)
     #shap.summary_plot(shap_values, test_x, feature_names=feature_names, plot_type="violin")
     #shap_values = np.round(shap_values, 2)
