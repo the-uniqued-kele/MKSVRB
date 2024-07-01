@@ -44,7 +44,7 @@ test_x3 = [input6, input7, input3, input4, input5]
 test_x3 = np.array(test_x3).reshape(1, -1)
 test_x5 = np.array(test_x5).reshape(1, -1)
 
-ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/blob/master/train.xlsx'
+ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/blob/master/train.csv'
 data = pd.read_csv(ur2,header=0)
 train_x = data.iloc[:, 1:].values
 train_y = data.iloc[:, 0].values
