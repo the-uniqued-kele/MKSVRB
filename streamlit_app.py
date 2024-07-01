@@ -17,7 +17,7 @@ url = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/%E5%85%B3%E7%B3%BB%
 response = requests.get(url)
 if response.status_code == 200:
     img = Image.open(BytesIO(response.content))
-    st.image(img, caption='GitHub 图像文件')
+    st.image(img)
 else:
     st.write('Failed to load image from GitHub')
 
@@ -315,11 +315,13 @@ if st.button('Predict'):
     #print(shap_values)
     #shap.summary_plot(shap_values, test_x, feature_names=feature_names, plot_type="violin")
     #shap_values = np.round(shap_values, 2)
+    buffer = io.BytesIO()
     shap.force_plot(explainer.expected_value, shap_values, test_x5, matplotlib=True, feature_names=feature_names, figsize=(30, 7), contribution_threshold=0.00001)
-    plt.savefig('C:/Users/薛伟荣/Desktop/布加综合征/部署/SHAP.png')
-    plt.show()
-    image2 = Image.open('C:/Users/薛伟荣/Desktop/布加综合征/部署/SHAP.png')
-    st.image(image2, use_column_width=True)
+    plt.savefig(buffer, format='png')
+    plt.close()
+    buffer.seek(0)  
+    image = Image.open(buffer)
+    st.image(image, use_column_width=True)
     st.write("*SHAP Force Plot:  The plot shows the contribution of each patient feature to the likelihood of recurrence "
              "of Budd-Chiari syndrome.A red arrow indicates that the feature increases the risk of recurrence, while a "
              "blue arrow indicates that the feature decreases the risk. The length of each bar represents the magnitude"
