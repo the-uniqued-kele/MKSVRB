@@ -45,7 +45,7 @@ test_x3 = np.array(test_x3).reshape(1, -1)
 test_x5 = np.array(test_x5).reshape(1, -1)
 
 ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/train.xlsx'
-data = pd.read_excelur2,header=0)
+data = pd.read_excel(ur2,header=0)
 train_x = data.iloc[:, 1:].values
 train_y = data.iloc[:, 0].values
 data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/train + valid.xlsx')
