@@ -45,9 +45,10 @@ test_x3 = np.array(test_x3).reshape(1, -1)
 test_x5 = np.array(test_x5).reshape(1, -1)
 
 ur2 = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/train.xlsx'
-response = requests.get(ur2)
 if response.status_code == 200:
-    data = pd.read_excel(BytesIO(response.content))
+    with open('train.xlsx', 'wb') as f:
+        f.write(response.content)
+    data = pd.read_excel('train.xlsx')
 train_x = data.iloc[:, 1:].values
 train_y = data.iloc[:, 0].values
 data = pd.read_excel('C:/Users/薛伟荣/Desktop/布加综合征/train + valid.xlsx')
