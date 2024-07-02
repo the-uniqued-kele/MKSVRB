@@ -14,7 +14,7 @@ import requests
 from io import BytesIO
 import tempfile
 
-url = 'https://github.com/the-uniqued-kele/MKSVRB/blob/master/%E5%85%B3%E7%B3%BB%E5%9B%BE2.png'
+url = 'https://github.com/the-uniqued-kele/MKSVRB/raw/master/%E5%85%B3%E7%B3%BB%E5%9B%BE2.png'
 response = requests.get(url)
 if response.status_code == 200:
     img = Image.open(BytesIO(response.content))
