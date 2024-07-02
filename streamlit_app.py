@@ -301,7 +301,7 @@ if st.button('Predict'):
     y_pred_proba = np.array(y_pred_proba)
     y_pred = (y_pred_proba >= 0.594477).astype(int)
     st.write(f'your score: {np.array(score).reshape(-1)}')
-    st.write(f'the probability of recurrence: {y_pred_proba}')
+    st.write(f'the risk of recurrence: {y_pred_proba}')
     if y_pred[0] == 1:
         st.write('recurrence risk: <span style="color:red"> high risk</span>', unsafe_allow_html=True)
     elif y_pred[0] == 0:
