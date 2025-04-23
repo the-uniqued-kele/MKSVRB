@@ -30,7 +30,7 @@ if input1 >= 50:
     input6 = 1
 elif input1 < 50:
     input6 = 0
-input2 = st.number_input("Operation(simple balloon dilation=1, stent implantation=2, catheter-directed thrombolysis=3, TIPS=4)")
+input2 = st.number_input("Endovascular interventions(simple balloon dilation=1, stent implantation=2, catheter-directed thrombolysis=3, TIPS=4)")
 if input2 == 0:
     input7 = 3
 else:
